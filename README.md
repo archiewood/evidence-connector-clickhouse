@@ -1,4 +1,4 @@
-# Evidence clickhouse Source Plugin
+# Evidence Clickhouse Source Plugin
 
 Install this plugin in an Evidence app with
 ```bash

@@ -6,18 +6,28 @@
  */
 
 import { EvidenceType } from "@evidence-dev/db-commons";
+import { createClient } from '@clickhouse/client';
 
 /**
  * @see https://docs.evidence.dev/plugins/creating-a-plugin/datasources#options-specification
  * @see https://github.com/evidence-dev/evidence/blob/main/packages/postgres/index.cjs#L316
  */
 export const options = {
-  SomeOption: {
-    title: "Some Option",
-    description:
-      "This object defines how SomeOption should be displayed and configured in the Settings UI",
-    type: "string", // options: 'string' | 'number' | 'boolean' | 'select' | 'file'
+  url: {
+    title: "URL",
+    description: "Clickhouse instance URL",
+    type: "string", 
   },
+  username: {
+    title: "Username",
+    type: "string",
+  },
+  password: {
+    title: "Password",
+    type: "string",
+    secret: true
+  },
+
 };
 
 /**
@@ -33,38 +43,37 @@ export const options = {
 export const getRunner = (options) => {
   console.debug(`SomeOption = ${options.SomeOption}`);
 
-  // This function will be called for EVERY file in the sources directory
-  // If you are expecting a specific file type (e.g. SQL files), make sure to filter
-  // to exclude others.
+  const client = createClient({
+    url: options.url,
+    username: options.username,
+    password: options.password,
+  });
 
-  // If you are using some local database file (e.g. a sqlite or duckdb file)
-  // You may also need to filter that file out as well
   return async (queryText, queryPath) => {
-    // Note: add your logic to process each file queryText and/or queryPath here
-    // ...
-    
-    // Example output, delete or modify as needed
-    const output = {
-      rows: [
-        { someInt: 1, someString: "string" },
-        { someInt: 2, someString: "string2" },
-      ],
-      columnTypes: [
-        {
-          name: "someInt",
-          evidenceType: EvidenceType.NUMBER,
-          typeFidelity: "inferred",
-        },
-        {
-          name: "someString",
-          evidenceType: EvidenceType.STRING,
-          typeFidelity: "inferred",
-        },
-      ],
-      expectedRowCount: 2,
-    };
+    try {
+      const rows = await client.query({
+        query: queryText,
+        format: 'JSONEachRow',
+      });
 
-    return output;
+      const result = await rows.json();
+
+      // Transform the result into the expected output format
+      const output = {
+        rows: result,
+        columnTypes: Object.keys(result[0] || {}).map((key) => ({
+          name: key,
+          evidenceType: typeof result[0][key] === 'number' ? EvidenceType.NUMBER : EvidenceType.STRING,
+          typeFidelity: 'inferred',
+        })),
+        expectedRowCount: result.length,
+      };
+
+      return output;
+    } catch (error) {
+      console.error('Error executing query:', error);
+      throw error;
+    }
   };
 };
 
