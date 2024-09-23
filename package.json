@@ -22,7 +22,8 @@
   "evidence": {
     "datasources": [
       "clickhouse"
-    ]
+    ],
+    "icon": "Clickhouse"
   },
   "keywords": [
     "evidence",

@@ -41,7 +41,6 @@ export const options = {
  * @type {import("@evidence-dev/db-commons").GetRunner<ConnectorOptions>}
  */
 export const getRunner = (options) => {
-  console.debug(`SomeOption = ${options.SomeOption}`);
 
   const client = createClient({
     url: options.url,
@@ -55,7 +54,7 @@ export const getRunner = (options) => {
         query: queryText,
         format: 'JSONEachRow',
       });
-
+      
       const result = await rows.json();
 
       // Transform the result into the expected output format
@@ -120,5 +119,23 @@ export const getRunner = (options) => {
 
 /** @type {import("@evidence-dev/db-commons").ConnectionTester<ConnectorOptions>} */
 export const testConnection = async (opts) => {
-  return true;
+  const client = createClient({
+    url: opts.url,
+    username: opts.username,
+    password: opts.password,
+  });
+
+  try {
+    const result = await client.query({
+      query: 'SELECT 1',
+      format: 'JSONEachRow',
+    });
+
+    await result.json(); // Ensure the query is executed and result is fetched
+
+    return true;
+  } catch (error) {
+    console.error('Error testing connection:', error);
+    return false;
+  }
 };
